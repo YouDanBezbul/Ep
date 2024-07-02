@@ -1,0 +1,2592 @@
+local HttpService = game:GetService("HttpService")
+
+-- Importing Configuration
+local ImportedConfiguration = {}
+
+pcall(function()
+    if getfenv().isfile and getfenv().readfile and getfenv().isfile(string.format("%s.ttwizz", game.GameId)) and getfenv().readfile(string.format("%s.ttwizz", game.GameId)) then
+        ImportedConfiguration = HttpService:JSONDecode(getfenv().readfile(string.format("%s.ttwizz", game.GameId)))
+    end
+end)
+
+-- Initializing Configuration
+local Configuration = {
+    Khungxuong = ImportedConfiguration["Khung xương"] or false,
+    Hop2d = ImportedConfiguration["Hộp 2D"] or false,
+    Thanhmau = ImportedConfiguration["Thanh máu"] or false,
+    Hienten = ImportedConfiguration["Hiển thị tên"] or false,
+    TracersPosition = ImportedConfiguration["TracersPosition"] or "Dưới",
+    High = ImportedConfiguration["Highlight"] or false,
+    Box3 = ImportedConfiguration["Box3d"] or false
+}
+
+-- Fluent UI Library
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+local tracersEnabled = false
+local tracersObjects = {}
+local tracersPosition = "Dưới"
+local camera = workspace.CurrentCamera
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local UIVisible = true
+local function ToggleUI()
+    UIVisible = not UIVisible
+    Window.Enabled = UIVisible
+end
+
+local UserInputService = game:GetService("UserInputService")
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.RightShift then
+        ToggleUI()
+    end
+end)
+
+-- UI Settings
+local UISettings = {
+    TabWidth = 160,
+    Size = { 580, 460 },
+    Theme = "Amethyst",
+    MinimizeKey = "RightShift"
+}
+
+-- Initialize UI
+local Window = Fluent:CreateWindow({
+    Title = "MiMonGaming",
+    SubTitle = "Demo",
+    TabWidth = UISettings.TabWidth,
+    Size = UDim2.fromOffset(table.unpack(UISettings.Size)),
+    Theme = UISettings.Theme,
+    MinimizeKey = Enum.KeyCode.F1  -- Đặt phím ẩn/hiện UI ở đây
+})
+
+local Tabs = { 
+    Main = Window:AddTab({ Title = "Định vị", Icon = "settings" }),
+    Team = Window:AddTab({ Title = "Chức năng phụ", Icon = "users" })
+}
+
+Window:SelectTab(1)
+
+-- Main Tab
+Tabs.Main:AddParagraph({
+    Title = "Định vị có áp dụng tất cả game",
+    Content = "Dù tất cả game nhưng có game thì không được!"
+})
+
+local MainSection = Tabs.Main:AddSection("ESP")
+
+-- Team Tab
+local TeamSection = Tabs.Team:AddSection("Team Settings")
+
+
+---------------------------------------------------------------------------- 
+local KhungxuongToggle = MainSection:AddToggle("KXToggle", {
+    Title = "Khung xương",
+    Default = Configuration.KX
+})
+
+KhungxuongToggle:OnChanged(function(Value)
+    Configuration.skeletonESPEnabled = Value
+    if Value then
+  
+            -- Khởi tạo và bắt đầu SkeletonESP khi toggle được bật
+            SkeletonESP = loadstring([[
+                local Players = game:GetService("Players")
+                local RunService = game:GetService("RunService")
+
+                local localPlayer = Players.LocalPlayer
+                local camera = workspace.CurrentCamera
+
+                local espObjects = {}
+                local espEnabled = true
+
+                local SkeletonESP = {}
+
+                function SkeletonESP.createDrawings()
+                    local esp = {
+                        head = Drawing.new("Line"),
+                        spine = Drawing.new("Line"),
+                        leftUpperArm = Drawing.new("Line"),
+                        leftLowerArm = Drawing.new("Line"),
+                        rightUpperArm = Drawing.new("Line"),
+                        rightLowerArm = Drawing.new("Line"),
+                        leftUpperLeg = Drawing.new("Line"),
+                        leftLowerLeg = Drawing.new("Line"),
+                        rightUpperLeg = Drawing.new("Line"),
+                        rightLowerLeg = Drawing.new("Line"),
+                        leftFoot = Drawing.new("Line"),
+                        rightFoot = Drawing.new("Line")
+                    }
+                    
+                    for _, drawing in pairs(esp) do
+                        drawing.Visible = false
+                        drawing.Thickness = 2
+                        drawing.Color = Color3.new(1, 0, 0)
+                    end
+                    
+                    return esp
+                end
+
+                local function worldToScreen(position)
+                    local screenPosition, onScreen = camera:WorldToViewportPoint(position)
+                    return Vector2.new(screenPosition.X, screenPosition.Y), onScreen
+                end
+
+                function SkeletonESP.updateSkeleton(character, esp)
+    local function updateLine(line, part1, part2)
+        if part1 and part2 then
+            local pos1, onScreen1 = worldToScreen(part1.Position)
+            local pos2, onScreen2 = worldToScreen(part2.Position)
+            if onScreen1 and onScreen2 then
+                line.From = pos1
+                line.To = pos2
+                line.Visible = true
+            else
+                line.Visible = false
+            end
+        else
+            line.Visible = false
+        end
+    end
+
+    local head = character:FindFirstChild("Head")
+    local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+    local lowerTorso = character:FindFirstChild("LowerTorso")
+    local leftUpperArm = character:FindFirstChild("LeftUpperArm") or character:FindFirstChild("Left Arm")
+    local leftLowerArm = character:FindFirstChild("LeftLowerArm")
+    local leftHand = character:FindFirstChild("LeftHand")
+    local rightUpperArm = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm")
+    local rightLowerArm = character:FindFirstChild("RightLowerArm")
+    local rightHand = character:FindFirstChild("RightHand")
+    local leftUpperLeg = character:FindFirstChild("LeftUpperLeg") or character:FindFirstChild("Left Leg")
+    local leftLowerLeg = character:FindFirstChild("LeftLowerLeg")
+    local leftFoot = character:FindFirstChild("LeftFoot")
+    local rightUpperLeg = character:FindFirstChild("RightUpperLeg") or character:FindFirstChild("Right Leg")
+    local rightLowerLeg = character:FindFirstChild("RightLowerLeg")
+    local rightFoot = character:FindFirstChild("RightFoot")
+
+    updateLine(esp.head, head, torso)
+    
+    if lowerTorso then
+        updateLine(esp.spine, torso, lowerTorso)
+    else
+        esp.spine.Visible = false
+    end
+
+    updateLine(esp.leftUpperArm, torso, leftUpperArm)
+    if leftLowerArm then
+        updateLine(esp.leftLowerArm, leftUpperArm, leftLowerArm)
+    else
+        updateLine(esp.leftLowerArm, leftUpperArm, leftHand or leftUpperArm)
+    end
+
+    updateLine(esp.rightUpperArm, torso, rightUpperArm)
+    if rightLowerArm then
+        updateLine(esp.rightLowerArm, rightUpperArm, rightLowerArm)
+    else
+        updateLine(esp.rightLowerArm, rightUpperArm, rightHand or rightUpperArm)
+    end
+
+    if lowerTorso then
+        updateLine(esp.leftUpperLeg, lowerTorso, leftUpperLeg)
+        updateLine(esp.rightUpperLeg, lowerTorso, rightUpperLeg)
+    else
+        updateLine(esp.leftUpperLeg, torso, leftUpperLeg)
+        updateLine(esp.rightUpperLeg, torso, rightUpperLeg)
+    end
+
+    if leftLowerLeg then
+        updateLine(esp.leftLowerLeg, leftUpperLeg, leftLowerLeg)
+    else
+        updateLine(esp.leftLowerLeg, leftUpperLeg, leftFoot or leftUpperLeg)
+    end
+
+    if rightLowerLeg then
+        updateLine(esp.rightLowerLeg, rightUpperLeg, rightLowerLeg)
+    else
+        updateLine(esp.rightLowerLeg, rightUpperLeg, rightFoot or rightUpperLeg)
+    end
+
+    if leftFoot then
+        updateLine(esp.leftFoot, leftLowerLeg or leftUpperLeg, leftFoot)
+    else
+        esp.leftFoot.Visible = false
+    end
+
+    if rightFoot then
+        updateLine(esp.rightFoot, rightLowerLeg or rightUpperLeg, rightFoot)
+    else
+        esp.rightFoot.Visible = false
+    end
+end
+
+                local function cleanupESP()
+                    for _, esp in pairs(espObjects) do
+                        for _, line in pairs(esp) do
+                            line:Remove()
+                        end
+                    end
+                    espObjects = {}
+                end
+
+                local function createESPForAllPlayers()
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= localPlayer and not espObjects[player] then
+                            espObjects[player] = SkeletonESP.createDrawings()
+                        end
+                    end
+                end
+
+                local function updateESP()
+                    if not espEnabled then
+                        for _, esp in pairs(espObjects) do
+                            for _, line in pairs(esp) do
+                                line.Visible = false
+                            end
+                        end
+                        return
+                    end
+
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= localPlayer then
+                            local character = player.Character
+                            if character and character:FindFirstChild("HumanoidRootPart") then
+                                local humanoid = character:FindFirstChild("Humanoid")
+                                local hrp = character.HumanoidRootPart
+                                
+                                local _, onScreen = camera:WorldToViewportPoint(hrp.Position)
+                                
+                                if onScreen and humanoid and humanoid.Health > 0 then
+                                    local esp = espObjects[player]
+                                    if not esp then
+                                        esp = SkeletonESP.createDrawings()
+                                        espObjects[player] = esp
+                                    end
+                                    SkeletonESP.updateSkeleton(character, esp)
+                                else
+                                    local esp = espObjects[player]
+                                    if esp then
+                                        for _, line in pairs(esp) do
+                                            line.Visible = false
+                                        end
+                                    end
+                                end
+                            else
+                                local esp = espObjects[player]
+                                if esp then
+                                    for _, line in pairs(esp) do
+                                        line.Visible = false
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                local function onPlayerRemoving(player)
+    local esp = espObjects[player]
+    if esp then
+        for _, line in pairs(esp) do
+            line:Remove()
+        end
+        espObjects[player] = nil
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    if player ~= localPlayer then
+        espObjects[player] = SkeletonESP.createDrawings()
+    end
+end)
+
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+RunService:BindToRenderStep("UpdateESP", Enum.RenderPriority.Camera.Value, updateESP)
+
+createESPForAllPlayers()
+
+return {
+    ToggleESP = function(enabled)
+        espEnabled = enabled
+        if not enabled then
+            for _, esp in pairs(espObjects) do
+                for _, line in pairs(esp) do
+                    line.Visible = false
+                end
+            end
+        end
+    end,
+    Cleanup = function()
+        RunService:UnbindFromRenderStep("UpdateESP")
+        cleanupESP()
+    end
+}
+            ]])()
+        if SkeletonESP then
+            SkeletonESP.ToggleESP(true)
+        end
+    else
+        if SkeletonESP then
+            SkeletonESP.ToggleESP(false)
+            SkeletonESP.Cleanup()
+            SkeletonESP = nil
+        end
+    end
+end)
+
+---------------------------------------------------------------------------- 
+local function createDrawings()
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Color = Color3.new(1, 1, 1)
+    box.Filled = false
+    box.Transparency = 1
+    return {box = box}
+end
+
+local espObjects = {}
+local espEnabled = false
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local localPlayer = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local espEnabled = false
+local espObjects = {}
+
+local function createDrawings()
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Color = Color3.new(1, 1, 1)
+    box.Filled = false
+    box.Transparency = 1
+    box.Visible = false
+    return {box = box}
+end
+
+local function updateESP()
+    if not espEnabled then return end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer then
+            local character = player.Character
+            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local vector, onScreen = camera:WorldToViewportPoint(hrp.Position)
+                
+                local esp = espObjects[player]
+                if not esp then
+                    esp = createDrawings()
+                    espObjects[player] = esp
+                end
+                
+                if onScreen then
+                    local headPosition = camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3, 0))
+                    local legPosition = camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+                    local height = math.abs(headPosition.Y - legPosition.Y)
+                    local width = height * 0.6
+                    
+                    esp.box.Size = Vector2.new(width, height)
+                    esp.box.Position = Vector2.new(vector.X - width / 2, vector.Y - height / 2)
+                    esp.box.Visible = true
+                else
+                    esp.box.Visible = false
+                end
+            else
+                if espObjects[player] then
+                    espObjects[player].box.Visible = false
+                end
+            end
+        end
+    end
+end
+
+local function playerAdded(player)
+    if player ~= localPlayer then
+        espObjects[player] = createDrawings()
+    end
+end
+
+local function playerRemoving(player)
+    local esp = espObjects[player]
+    if esp then
+        esp.box:Remove()
+        espObjects[player] = nil
+    end
+end
+
+local function cleanupESP()
+    for _, esp in pairs(espObjects) do
+        if esp.box then
+            esp.box:Remove()
+        end
+    end
+    espObjects = {}
+end
+
+Players.PlayerAdded:Connect(playerAdded)
+Players.PlayerRemoving:Connect(playerRemoving)
+
+local renderSteppedConnection
+
+local Hop2dToggle = MainSection:AddToggle("H2dToggle", {
+    Title = "Hộp 2D",
+    Default = Configuration.H2d
+})
+
+Hop2dToggle:OnChanged(function(Value)
+    Configuration.Hop2d = Value
+    espEnabled = Value
+    if Value then
+        renderSteppedConnection = RunService.RenderStepped:Connect(updateESP)
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= localPlayer then
+                playerAdded(player)
+            end
+        end
+    else
+        if renderSteppedConnection then
+            renderSteppedConnection:Disconnect()
+        end
+        for _, esp in pairs(espObjects) do
+            esp.box.Visible = false
+        end
+    end
+end)
+
+---------------------------------------------------------------------------- 
+local healthBars = {}
+local healthBarConnections = {}
+local healthBarYOffset = 20
+
+local function CreateHealthBar(character)
+    if healthBars[character] then return end
+    
+    local background = Drawing.new("Square")
+    background.Thickness = 1
+    background.Filled = true
+    background.Color = Color3.new(0, 0, 0)
+    background.Transparency = 0.5
+    background.Visible = false
+
+    local bar = Drawing.new("Square")
+    bar.Thickness = 1
+    bar.Filled = true
+    bar.Transparency = 1
+    bar.Visible = false
+
+    healthBars[character] = {background = background, bar = bar}
+    print("Health bar created for character")
+end
+
+local function UpdateAllHealthBars()
+    for character, healthBarObjects in pairs(healthBars) do
+        local humanoid = character:FindFirstChild("Humanoid")
+        local head = character:FindFirstChild("Head")
+        local player = Players:GetPlayerFromCharacter(character)
+
+        if humanoid and head and humanoid.Health > 0 and player and player ~= Players.LocalPlayer then
+            local healthPercent = humanoid.Health / humanoid.MaxHealth
+            local headPos, onScreen = camera:WorldToViewportPoint(head.Position)
+
+            if onScreen then
+                local barWidth = 70
+                local barHeight = 5
+                local barPosY = headPos.Y - healthBarYOffset
+
+                healthBarObjects.background.Size = Vector2.new(barWidth, barHeight)
+                healthBarObjects.background.Position = Vector2.new(headPos.X - barWidth/2, barPosY)
+                healthBarObjects.background.Visible = true
+
+                healthBarObjects.bar.Size = Vector2.new(barWidth * healthPercent, barHeight)
+                healthBarObjects.bar.Position = Vector2.new(headPos.X - barWidth/2, barPosY)
+                healthBarObjects.bar.Color = Color3.new(1 - healthPercent, healthPercent, 0)
+                healthBarObjects.bar.Visible = true
+            else
+                healthBarObjects.background.Visible = false
+                healthBarObjects.bar.Visible = false
+            end
+        else
+            healthBarObjects.background.Visible = false
+            healthBarObjects.bar.Visible = false
+        end
+    end
+end
+
+local function RemoveHealthBar(character)
+    if healthBars[character] then
+        healthBars[character].background:Remove()
+        healthBars[character].bar:Remove()
+        healthBars[character] = nil
+        print("Health bar removed for character")
+    end
+end
+
+local function SetupHealthBars()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character and player ~= Players.LocalPlayer then
+            CreateHealthBar(player.Character)
+        end
+    end
+end
+
+local ThanhMauToggle = MainSection:AddToggle("mauToggle", {
+    Title = "Thanh máu",
+    Default = false
+})
+
+ThanhMauToggle:OnChanged(function(Value)
+    Configuration.mau = Value
+    print("Thanh máu toggle changed to: " .. tostring(Value))
+    
+    if Value then
+        SetupHealthBars()  -- Tạo thanh máu cho tất cả người chơi hiện tại
+
+        local function onCharacterAdded(character)
+            if Configuration.mau and character ~= Players.LocalPlayer.Character then
+                CreateHealthBar(character)
+            end
+        end
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            player.CharacterAdded:Connect(onCharacterAdded)
+        end
+
+        table.insert(healthBarConnections, Players.PlayerAdded:Connect(function(player)
+            player.CharacterAdded:Connect(onCharacterAdded)
+        end))
+        
+        table.insert(healthBarConnections, RunService.RenderStepped:Connect(UpdateAllHealthBars))
+    else
+        for _, connection in ipairs(healthBarConnections) do
+            connection:Disconnect()
+        end
+        healthBarConnections = {}
+        
+        for character, _ in pairs(healthBars) do
+            RemoveHealthBar(character)
+        end
+    end
+end)
+
+---------------------------------------------------------------------------- 
+local TeamColorEnabled = false
+local ShowNamesEnabled = false
+local NameSize = 14  -- Kích thước mặc định
+
+-- Hàm để cập nhật tên tùy chỉnh
+local function UpdateCustomName(player)
+    local function updateForCharacter(character)
+        if character then
+            local humanoid = character:WaitForChild("Humanoid")
+            if humanoid then
+                humanoid.DisplayDistanceType = ShowNamesEnabled and Enum.HumanoidDisplayDistanceType.None or Enum.HumanoidDisplayDistanceType.Viewer
+            end
+            
+            local head = character:WaitForChild("Head")
+            if head then
+                local nameGui = head:FindFirstChild("NameGui") or Instance.new("BillboardGui")
+                nameGui.Name = "NameGui"
+                nameGui.AlwaysOnTop = true
+                nameGui.Size = UDim2.new(0, 100, 0, 40)
+                nameGui.StudsOffset = Vector3.new(0, 2, 0)
+                nameGui.Parent = head
+
+                local nameLabel = nameGui:FindFirstChild("NameLabel") or Instance.new("TextLabel")
+                nameLabel.Name = "NameLabel"
+                nameLabel.Size = UDim2.new(1, 0, 1, 0)
+                nameLabel.BackgroundTransparency = 1
+                nameLabel.TextColor3 = Color3.new(1, 1, 1)
+                nameLabel.TextStrokeTransparency = 0
+                nameLabel.TextSize = NameSize
+                nameLabel.Font = Enum.Font.SourceSansBold
+                nameLabel.Parent = nameGui
+
+                if ShowNamesEnabled then
+                    nameGui.Enabled = true
+                    nameLabel.Text = player.Name
+                    if player.Team then
+                        nameLabel.TextColor3 = player.TeamColor.Color
+                    end
+                else
+                    nameGui.Enabled = false
+                end
+            end
+        end
+    end
+
+    if player.Character then
+        updateForCharacter(player.Character)
+    end
+
+    player.CharacterAdded:Connect(updateForCharacter)
+end
+
+local function PlayerAdded(player)
+    if player ~= game.Players.LocalPlayer then
+        UpdateCustomName(player)
+        player:GetPropertyChangedSignal("Team"):Connect(function()
+            UpdateCustomName(player)
+        end)
+    end
+end
+
+local HientenToggle = MainSection:AddToggle("tenToggle", {
+    Title = "Hiển thị tên",
+    Default = Configuration.ten
+})
+
+HientenToggle:OnChanged(function(Value)
+    Configuration.ShowNamesEnabled = Value
+    ShowNamesEnabled = Value
+    if Value then
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+                UpdateCustomName(player)
+            end
+        end
+    end
+    
+    game.Players.PlayerAdded:Connect(PlayerAdded)
+
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= game.Players.LocalPlayer then
+            PlayerAdded(player)
+        end
+    end
+end)
+
+-- Thêm slider để điều chỉnh kích thước tên
+local NameSizeSlider = MainSection:AddSlider("NameSizeSlider", {
+    Title = "Kích thước tên",
+    Min = 1,
+    Max = 100,
+    Default = 14,
+    Step = 1,
+    Rounding = 0,
+    Callback = function(Value)
+        NameSize = Value
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer and player.Character then
+                local head = player.Character:FindFirstChild("Head")
+                if head then
+                    local nameGui = head:FindFirstChild("NameGui")
+                    if nameGui then
+                        local nameLabel = nameGui:FindFirstChild("NameLabel")
+                        if nameLabel then
+                            nameLabel.TextSize = Value
+                        end
+                    end
+                end
+            end
+        end
+    end
+})
+
+NameSizeSlider:SetValue(14)  -- Đặt giá trị mặc định
+
+----------------------------------------------------------------------------
+local tracersObjects = {}
+local tracersEnabled = false
+local tracersPosition = "Dưới"
+local tracerThickness = 1
+local tracerColor = Color3.new(0.4, 0.7, 1)
+local tracerTransparency = 1
+local boxesEnabled = false
+local boxColor = Color3.new(1, 1, 1)
+local boxTransparency = 0.5
+local boxThickness = 1
+
+local function taoTracer()
+    local tracer = Drawing.new("Line")
+    tracer.Thickness = tracerThickness
+    tracer.Color = tracerColor
+    tracer.Transparency = tracerTransparency
+    return tracer
+end
+
+local function taoBox()
+    local box = Drawing.new("Quad")
+    box.Thickness = boxThickness
+    box.Color = boxColor
+    box.Transparency = boxTransparency
+    box.Filled = false
+    return box
+end
+
+local function layViTriTracer()
+    local kichThuocManHinh = camera.ViewportSize
+    local viTri = Vector2.new(kichThuocManHinh.X / 2, kichThuocManHinh.Y)
+    
+    if tracersPosition == "Trên" then
+        viTri = Vector2.new(kichThuocManHinh.X / 2, 0)
+    elseif tracersPosition == "Giữa" then
+        viTri = Vector2.new(kichThuocManHinh.X / 2, kichThuocManHinh.Y / 2)
+    elseif tracersPosition == "Trái" then
+        viTri = Vector2.new(0, kichThuocManHinh.Y / 2)
+    elseif tracersPosition == "Phải" then
+        viTri = Vector2.new(kichThuocManHinh.X, kichThuocManHinh.Y / 2)
+    end
+    
+    return viTri
+end
+
+local function capNhatESP()
+    local diemBatDauTracer = layViTriTracer()
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer then
+            local playerObjects = tracersObjects[player]
+            if not playerObjects then
+                playerObjects = {
+                    tracer = taoTracer(),
+                    box = taoBox()
+                }
+                tracersObjects[player] = playerObjects
+            end
+            
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local hrp = character.HumanoidRootPart
+                local vector, trongManHinh = camera:WorldToViewportPoint(hrp.Position)
+                
+                if trongManHinh then
+                    -- Cập nhật tracer
+                    if tracersEnabled then
+                        playerObjects.tracer.From = diemBatDauTracer
+                        playerObjects.tracer.To = Vector2.new(vector.X, vector.Y)
+                        playerObjects.tracer.Visible = true
+                    else
+                        playerObjects.tracer.Visible = false
+                    end
+                    
+                    -- Cập nhật box
+                    if boxesEnabled then
+                        local topLeft = camera:WorldToViewportPoint((hrp.CFrame * CFrame.new(-3, 3, 0)).Position)
+                        local topRight = camera:WorldToViewportPoint((hrp.CFrame * CFrame.new(3, 3, 0)).Position)
+                        local bottomLeft = camera:WorldToViewportPoint((hrp.CFrame * CFrame.new(-3, -3, 0)).Position)
+                        local bottomRight = camera:WorldToViewportPoint((hrp.CFrame * CFrame.new(3, -3, 0)).Position)
+                        
+                        playerObjects.box.PointA = Vector2.new(topLeft.X, topLeft.Y)
+                        playerObjects.box.PointB = Vector2.new(topRight.X, topRight.Y)
+                        playerObjects.box.PointC = Vector2.new(bottomRight.X, bottomRight.Y)
+                        playerObjects.box.PointD = Vector2.new(bottomLeft.X, bottomLeft.Y)
+                        playerObjects.box.Visible = true
+                    else
+                        playerObjects.box.Visible = false
+                    end
+                else
+                    playerObjects.tracer.Visible = false
+                    playerObjects.box.Visible = false
+                end
+            else
+                playerObjects.tracer.Visible = false
+                playerObjects.box.Visible = false
+            end
+        end
+    end
+end
+
+local function donDepESP()
+    for player, objects in pairs(tracersObjects) do
+        objects.tracer:Remove()
+        objects.box:Remove()
+    end
+    tracersObjects = {}
+end
+
+local function playerRemoving(player)
+    if tracersObjects[player] then
+        tracersObjects[player].tracer:Remove()
+        tracersObjects[player].box:Remove()
+        tracersObjects[player] = nil
+    end
+end
+
+Players.PlayerRemoving:Connect(playerRemoving)
+
+-- UI Components
+local TracersDropdown = MainSection:AddDropdown("TracersDropdown", {
+    Title = "Đường kẻ",
+    Values = {"Tắt", "Trên", "Dưới", "Giữa", "Trái", "Phải"},
+    Multi = false,
+    Default = Configuration.TracersPosition == "Tắt" and 1 or table.find({"Trên", "Dưới", "Giữa", "Trái", "Phải"}, Configuration.TracersPosition),
+})
+
+TracersDropdown:OnChanged(function(Value)
+    if Value == "Tắt" then
+        tracersEnabled = false
+    else
+        tracersEnabled = true
+        tracersPosition = Value
+    end
+    Configuration.Tracers = tracersEnabled
+    Configuration.TracersPosition = Value
+end)
+
+local BoxToggle = MainSection:AddToggle("BoxToggle", {
+    Title = "Hiển thị Box",
+    Default = boxesEnabled
+})
+
+BoxToggle:OnChanged(function(Value)
+    boxesEnabled = Value
+    Configuration.BoxesEnabled = Value
+end)
+
+local HttpService = game:GetService("HttpService")
+
+-- Importing Configuration
+local ImportedConfiguration = {}
+
+pcall(function()
+    if getfenv().isfile and getfenv().readfile and getfenv().isfile(string.format("%s.ttwizz", game.GameId)) and getfenv().readfile(string.format("%s.ttwizz", game.GameId)) then
+        ImportedConfiguration = HttpService:JSONDecode(getfenv().readfile(string.format("%s.ttwizz", game.GameId)))
+    end
+end)
+
+-- Initializing Configuration
+local Configuration = {
+    Khungxuong = ImportedConfiguration["Khung xương"] or false,
+    Hop2d = ImportedConfiguration["Hộp 2D"] or false,
+    Thanhmau = ImportedConfiguration["Thanh máu"] or false,
+    Hienten = ImportedConfiguration["Hiển thị tên"] or false,
+    TracersPosition = ImportedConfiguration["TracersPosition"] or "Dưới",
+    High = ImportedConfiguration["Highlight"] or false,
+    Box3 = ImportedConfiguration["Box3d"] or false
+}
+
+-- Fluent UI Library
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+local tracersEnabled = false
+local tracersObjects = {}
+local tracersPosition = "Dưới"
+local camera = workspace.CurrentCamera
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local UIVisible = true
+local function ToggleUI()
+    UIVisible = not UIVisible
+    Window.Enabled = UIVisible
+end
+
+local UserInputService = game:GetService("UserInputService")
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.RightShift then
+        ToggleUI()
+    end
+end)
+
+-- UI Settings
+local UISettings = {
+    TabWidth = 160,
+    Size = { 580, 460 },
+    Theme = "Amethyst",
+    MinimizeKey = "RightShift"
+}
+
+-- Initialize UI
+local Window = Fluent:CreateWindow({
+    Title = "MiMonGaming",
+    SubTitle = "Demo",
+    TabWidth = UISettings.TabWidth,
+    Size = UDim2.fromOffset(table.unpack(UISettings.Size)),
+    Theme = UISettings.Theme,
+    MinimizeKey = Enum.KeyCode.F1  -- Đặt phím ẩn/hiện UI ở đây
+})
+
+local Tabs = { 
+    Main = Window:AddTab({ Title = "Định vị", Icon = "settings" }),
+    Team = Window:AddTab({ Title = "Chức năng phụ", Icon = "users" })
+}
+
+Window:SelectTab(1)
+
+-- Main Tab
+Tabs.Main:AddParagraph({
+    Title = "Định vị có áp dụng tất cả game",
+    Content = "Dù tất cả game nhưng có game thì không được!"
+})
+
+local MainSection = Tabs.Main:AddSection("ESP")
+
+-- Team Tab
+local TeamSection = Tabs.Team:AddSection("Team Settings")
+
+
+---------------------------------------------------------------------------- 
+local KhungxuongToggle = MainSection:AddToggle("KXToggle", {
+    Title = "Khung xương",
+    Default = Configuration.KX
+})
+
+KhungxuongToggle:OnChanged(function(Value)
+    Configuration.skeletonESPEnabled = Value
+    if Value then
+  
+            -- Khởi tạo và bắt đầu SkeletonESP khi toggle được bật
+            SkeletonESP = loadstring([[
+                local Players = game:GetService("Players")
+                local RunService = game:GetService("RunService")
+
+                local localPlayer = Players.LocalPlayer
+                local camera = workspace.CurrentCamera
+
+                local espObjects = {}
+                local espEnabled = true
+
+                local SkeletonESP = {}
+
+                function SkeletonESP.createDrawings()
+                    local esp = {
+                        head = Drawing.new("Line"),
+                        spine = Drawing.new("Line"),
+                        leftUpperArm = Drawing.new("Line"),
+                        leftLowerArm = Drawing.new("Line"),
+                        rightUpperArm = Drawing.new("Line"),
+                        rightLowerArm = Drawing.new("Line"),
+                        leftUpperLeg = Drawing.new("Line"),
+                        leftLowerLeg = Drawing.new("Line"),
+                        rightUpperLeg = Drawing.new("Line"),
+                        rightLowerLeg = Drawing.new("Line"),
+                        leftFoot = Drawing.new("Line"),
+                        rightFoot = Drawing.new("Line")
+                    }
+                    
+                    for _, drawing in pairs(esp) do
+                        drawing.Visible = false
+                        drawing.Thickness = 2
+                        drawing.Color = Color3.new(1, 0, 0)
+                    end
+                    
+                    return esp
+                end
+
+                local function worldToScreen(position)
+                    local screenPosition, onScreen = camera:WorldToViewportPoint(position)
+                    return Vector2.new(screenPosition.X, screenPosition.Y), onScreen
+                end
+
+                function SkeletonESP.updateSkeleton(character, esp)
+    local function updateLine(line, part1, part2)
+        if part1 and part2 then
+            local pos1, onScreen1 = worldToScreen(part1.Position)
+            local pos2, onScreen2 = worldToScreen(part2.Position)
+            if onScreen1 and onScreen2 then
+                line.From = pos1
+                line.To = pos2
+                line.Visible = true
+            else
+                line.Visible = false
+            end
+        else
+            line.Visible = false
+        end
+    end
+
+    local head = character:FindFirstChild("Head")
+    local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+    local lowerTorso = character:FindFirstChild("LowerTorso")
+    local leftUpperArm = character:FindFirstChild("LeftUpperArm") or character:FindFirstChild("Left Arm")
+    local leftLowerArm = character:FindFirstChild("LeftLowerArm")
+    local leftHand = character:FindFirstChild("LeftHand")
+    local rightUpperArm = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm")
+    local rightLowerArm = character:FindFirstChild("RightLowerArm")
+    local rightHand = character:FindFirstChild("RightHand")
+    local leftUpperLeg = character:FindFirstChild("LeftUpperLeg") or character:FindFirstChild("Left Leg")
+    local leftLowerLeg = character:FindFirstChild("LeftLowerLeg")
+    local leftFoot = character:FindFirstChild("LeftFoot")
+    local rightUpperLeg = character:FindFirstChild("RightUpperLeg") or character:FindFirstChild("Right Leg")
+    local rightLowerLeg = character:FindFirstChild("RightLowerLeg")
+    local rightFoot = character:FindFirstChild("RightFoot")
+
+    updateLine(esp.head, head, torso)
+    
+    if lowerTorso then
+        updateLine(esp.spine, torso, lowerTorso)
+    else
+        esp.spine.Visible = false
+    end
+
+    updateLine(esp.leftUpperArm, torso, leftUpperArm)
+    if leftLowerArm then
+        updateLine(esp.leftLowerArm, leftUpperArm, leftLowerArm)
+    else
+        updateLine(esp.leftLowerArm, leftUpperArm, leftHand or leftUpperArm)
+    end
+
+    updateLine(esp.rightUpperArm, torso, rightUpperArm)
+    if rightLowerArm then
+        updateLine(esp.rightLowerArm, rightUpperArm, rightLowerArm)
+    else
+        updateLine(esp.rightLowerArm, rightUpperArm, rightHand or rightUpperArm)
+    end
+
+    if lowerTorso then
+        updateLine(esp.leftUpperLeg, lowerTorso, leftUpperLeg)
+        updateLine(esp.rightUpperLeg, lowerTorso, rightUpperLeg)
+    else
+        updateLine(esp.leftUpperLeg, torso, leftUpperLeg)
+        updateLine(esp.rightUpperLeg, torso, rightUpperLeg)
+    end
+
+    if leftLowerLeg then
+        updateLine(esp.leftLowerLeg, leftUpperLeg, leftLowerLeg)
+    else
+        updateLine(esp.leftLowerLeg, leftUpperLeg, leftFoot or leftUpperLeg)
+    end
+
+    if rightLowerLeg then
+        updateLine(esp.rightLowerLeg, rightUpperLeg, rightLowerLeg)
+    else
+        updateLine(esp.rightLowerLeg, rightUpperLeg, rightFoot or rightUpperLeg)
+    end
+
+    if leftFoot then
+        updateLine(esp.leftFoot, leftLowerLeg or leftUpperLeg, leftFoot)
+    else
+        esp.leftFoot.Visible = false
+    end
+
+    if rightFoot then
+        updateLine(esp.rightFoot, rightLowerLeg or rightUpperLeg, rightFoot)
+    else
+        esp.rightFoot.Visible = false
+    end
+end
+
+                local function cleanupESP()
+                    for _, esp in pairs(espObjects) do
+                        for _, line in pairs(esp) do
+                            line:Remove()
+                        end
+                    end
+                    espObjects = {}
+                end
+
+                local function createESPForAllPlayers()
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= localPlayer and not espObjects[player] then
+                            espObjects[player] = SkeletonESP.createDrawings()
+                        end
+                    end
+                end
+
+                local function updateESP()
+                    if not espEnabled then
+                        for _, esp in pairs(espObjects) do
+                            for _, line in pairs(esp) do
+                                line.Visible = false
+                            end
+                        end
+                        return
+                    end
+
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= localPlayer then
+                            local character = player.Character
+                            if character and character:FindFirstChild("HumanoidRootPart") then
+                                local humanoid = character:FindFirstChild("Humanoid")
+                                local hrp = character.HumanoidRootPart
+                                
+                                local _, onScreen = camera:WorldToViewportPoint(hrp.Position)
+                                
+                                if onScreen and humanoid and humanoid.Health > 0 then
+                                    local esp = espObjects[player]
+                                    if not esp then
+                                        esp = SkeletonESP.createDrawings()
+                                        espObjects[player] = esp
+                                    end
+                                    SkeletonESP.updateSkeleton(character, esp)
+                                else
+                                    local esp = espObjects[player]
+                                    if esp then
+                                        for _, line in pairs(esp) do
+                                            line.Visible = false
+                                        end
+                                    end
+                                end
+                            else
+                                local esp = espObjects[player]
+                                if esp then
+                                    for _, line in pairs(esp) do
+                                        line.Visible = false
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                local function onPlayerRemoving(player)
+    local esp = espObjects[player]
+    if esp then
+        for _, line in pairs(esp) do
+            line:Remove()
+        end
+        espObjects[player] = nil
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    if player ~= localPlayer then
+        espObjects[player] = SkeletonESP.createDrawings()
+    end
+end)
+
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+RunService:BindToRenderStep("UpdateESP", Enum.RenderPriority.Camera.Value, updateESP)
+
+createESPForAllPlayers()
+
+return {
+    ToggleESP = function(enabled)
+        espEnabled = enabled
+        if not enabled then
+            for _, esp in pairs(espObjects) do
+                for _, line in pairs(esp) do
+                    line.Visible = false
+                end
+            end
+        end
+    end,
+    Cleanup = function()
+        RunService:UnbindFromRenderStep("UpdateESP")
+        cleanupESP()
+    end
+}
+            ]])()
+        if SkeletonESP then
+            SkeletonESP.ToggleESP(true)
+        end
+    else
+        if SkeletonESP then
+            SkeletonESP.ToggleESP(false)
+            SkeletonESP.Cleanup()
+            SkeletonESP = nil
+        end
+    end
+end)
+
+---------------------------------------------------------------------------- 
+local function createDrawings()
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Color = Color3.new(1, 1, 1)
+    box.Filled = false
+    box.Transparency = 1
+    return {box = box}
+end
+
+local espObjects = {}
+local espEnabled = false
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local localPlayer = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local espEnabled = false
+local espObjects = {}
+
+local function createDrawings()
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Color = Color3.new(1, 1, 1)
+    box.Filled = false
+    box.Transparency = 1
+    box.Visible = false
+    return {box = box}
+end
+
+local function updateESP()
+    if not espEnabled then return end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer then
+            local character = player.Character
+            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local vector, onScreen = camera:WorldToViewportPoint(hrp.Position)
+                
+                local esp = espObjects[player]
+                if not esp then
+                    esp = createDrawings()
+                    espObjects[player] = esp
+                end
+                
+                if onScreen then
+                    local headPosition = camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3, 0))
+                    local legPosition = camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+                    local height = math.abs(headPosition.Y - legPosition.Y)
+                    local width = height * 0.6
+                    
+                    esp.box.Size = Vector2.new(width, height)
+                    esp.box.Position = Vector2.new(vector.X - width / 2, vector.Y - height / 2)
+                    esp.box.Visible = true
+                else
+                    esp.box.Visible = false
+                end
+            else
+                if espObjects[player] then
+                    espObjects[player].box.Visible = false
+                end
+            end
+        end
+    end
+end
+
+local function playerAdded(player)
+    if player ~= localPlayer then
+        espObjects[player] = createDrawings()
+    end
+end
+
+local function playerRemoving(player)
+    local esp = espObjects[player]
+    if esp then
+        esp.box:Remove()
+        espObjects[player] = nil
+    end
+end
+
+local function cleanupESP()
+    for _, esp in pairs(espObjects) do
+        if esp.box then
+            esp.box:Remove()
+        end
+    end
+    espObjects = {}
+end
+
+Players.PlayerAdded:Connect(playerAdded)
+Players.PlayerRemoving:Connect(playerRemoving)
+
+local renderSteppedConnection
+
+local Hop2dToggle = MainSection:AddToggle("H2dToggle", {
+    Title = "Hộp 2D",
+    Default = Configuration.H2d
+})
+
+Hop2dToggle:OnChanged(function(Value)
+    Configuration.Hop2d = Value
+    espEnabled = Value
+    if Value then
+        renderSteppedConnection = RunService.RenderStepped:Connect(updateESP)
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= localPlayer then
+                playerAdded(player)
+            end
+        end
+    else
+        if renderSteppedConnection then
+            renderSteppedConnection:Disconnect()
+        end
+        for _, esp in pairs(espObjects) do
+            esp.box.Visible = false
+        end
+    end
+end)
+
+---------------------------------------------------------------------------- 
+local healthBars = {}
+local healthBarConnections = {}
+local healthBarYOffset = 20
+
+local function CreateHealthBar(character)
+    if healthBars[character] then return end
+    
+    local background = Drawing.new("Square")
+    background.Thickness = 1
+    background.Filled = true
+    background.Color = Color3.new(0, 0, 0)
+    background.Transparency = 0.5
+    background.Visible = false
+
+    local bar = Drawing.new("Square")
+    bar.Thickness = 1
+    bar.Filled = true
+    bar.Transparency = 1
+    bar.Visible = false
+
+    healthBars[character] = {background = background, bar = bar}
+    print("Health bar created for character")
+end
+
+local function UpdateAllHealthBars()
+    for character, healthBarObjects in pairs(healthBars) do
+        local humanoid = character:FindFirstChild("Humanoid")
+        local head = character:FindFirstChild("Head")
+        local player = Players:GetPlayerFromCharacter(character)
+
+        if humanoid and head and humanoid.Health > 0 and player and player ~= Players.LocalPlayer then
+            local healthPercent = humanoid.Health / humanoid.MaxHealth
+            local headPos, onScreen = camera:WorldToViewportPoint(head.Position)
+
+            if onScreen then
+                local barWidth = 70
+                local barHeight = 5
+                local barPosY = headPos.Y - healthBarYOffset
+
+                healthBarObjects.background.Size = Vector2.new(barWidth, barHeight)
+                healthBarObjects.background.Position = Vector2.new(headPos.X - barWidth/2, barPosY)
+                healthBarObjects.background.Visible = true
+
+                healthBarObjects.bar.Size = Vector2.new(barWidth * healthPercent, barHeight)
+                healthBarObjects.bar.Position = Vector2.new(headPos.X - barWidth/2, barPosY)
+                healthBarObjects.bar.Color = Color3.new(1 - healthPercent, healthPercent, 0)
+                healthBarObjects.bar.Visible = true
+            else
+                healthBarObjects.background.Visible = false
+                healthBarObjects.bar.Visible = false
+            end
+        else
+            healthBarObjects.background.Visible = false
+            healthBarObjects.bar.Visible = false
+        end
+    end
+end
+
+local function RemoveHealthBar(character)
+    if healthBars[character] then
+        healthBars[character].background:Remove()
+        healthBars[character].bar:Remove()
+        healthBars[character] = nil
+        print("Health bar removed for character")
+    end
+end
+
+local function SetupHealthBars()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character and player ~= Players.LocalPlayer then
+            CreateHealthBar(player.Character)
+        end
+    end
+end
+
+local ThanhMauToggle = MainSection:AddToggle("mauToggle", {
+    Title = "Thanh máu",
+    Default = false
+})
+
+ThanhMauToggle:OnChanged(function(Value)
+    Configuration.mau = Value
+    print("Thanh máu toggle changed to: " .. tostring(Value))
+    
+    if Value then
+        SetupHealthBars()  -- Tạo thanh máu cho tất cả người chơi hiện tại
+
+        local function onCharacterAdded(character)
+            if Configuration.mau and character ~= Players.LocalPlayer.Character then
+                CreateHealthBar(character)
+            end
+        end
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            player.CharacterAdded:Connect(onCharacterAdded)
+        end
+
+        table.insert(healthBarConnections, Players.PlayerAdded:Connect(function(player)
+            player.CharacterAdded:Connect(onCharacterAdded)
+        end))
+        
+        table.insert(healthBarConnections, RunService.RenderStepped:Connect(UpdateAllHealthBars))
+    else
+        for _, connection in ipairs(healthBarConnections) do
+            connection:Disconnect()
+        end
+        healthBarConnections = {}
+        
+        for character, _ in pairs(healthBars) do
+            RemoveHealthBar(character)
+        end
+    end
+end)
+
+---------------------------------------------------------------------------- 
+local TeamColorEnabled = false
+local ShowNamesEnabled = false
+local NameSize = 14  -- Kích thước mặc định
+
+-- Hàm để cập nhật tên tùy chỉnh
+local function UpdateCustomName(player)
+    local function updateForCharacter(character)
+        if character then
+            local humanoid = character:WaitForChild("Humanoid")
+            if humanoid then
+                humanoid.DisplayDistanceType = ShowNamesEnabled and Enum.HumanoidDisplayDistanceType.None or Enum.HumanoidDisplayDistanceType.Viewer
+            end
+            
+            local head = character:WaitForChild("Head")
+            if head then
+                local nameGui = head:FindFirstChild("NameGui") or Instance.new("BillboardGui")
+                nameGui.Name = "NameGui"
+                nameGui.AlwaysOnTop = true
+                nameGui.Size = UDim2.new(0, 100, 0, 40)
+                nameGui.StudsOffset = Vector3.new(0, 2, 0)
+                nameGui.Parent = head
+
+                local nameLabel = nameGui:FindFirstChild("NameLabel") or Instance.new("TextLabel")
+                nameLabel.Name = "NameLabel"
+                nameLabel.Size = UDim2.new(1, 0, 1, 0)
+                nameLabel.BackgroundTransparency = 1
+                nameLabel.TextColor3 = Color3.new(1, 1, 1)
+                nameLabel.TextStrokeTransparency = 0
+                nameLabel.TextSize = NameSize
+                nameLabel.Font = Enum.Font.SourceSansBold
+                nameLabel.Parent = nameGui
+
+                if ShowNamesEnabled then
+                    nameGui.Enabled = true
+                    nameLabel.Text = player.Name
+                    if player.Team then
+                        nameLabel.TextColor3 = player.TeamColor.Color
+                    end
+                else
+                    nameGui.Enabled = false
+                end
+            end
+        end
+    end
+
+    if player.Character then
+        updateForCharacter(player.Character)
+    end
+
+    player.CharacterAdded:Connect(updateForCharacter)
+end
+
+local function PlayerAdded(player)
+    if player ~= game.Players.LocalPlayer then
+        UpdateCustomName(player)
+        player:GetPropertyChangedSignal("Team"):Connect(function()
+            UpdateCustomName(player)
+        end)
+    end
+end
+
+local HientenToggle = MainSection:AddToggle("tenToggle", {
+    Title = "Hiển thị tên",
+    Default = Configuration.ten
+})
+
+HientenToggle:OnChanged(function(Value)
+    Configuration.ShowNamesEnabled = Value
+    ShowNamesEnabled = Value
+    if Value then
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+                UpdateCustomName(player)
+            end
+        end
+    end
+    
+    game.Players.PlayerAdded:Connect(PlayerAdded)
+
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= game.Players.LocalPlayer then
+            PlayerAdded(player)
+        end
+    end
+end)
+
+-- Thêm slider để điều chỉnh kích thước tên
+local NameSizeSlider = MainSection:AddSlider("NameSizeSlider", {
+    Title = "Kích thước tên",
+    Min = 1,
+    Max = 100,
+    Default = 14,
+    Step = 1,
+    Rounding = 0,
+    Callback = function(Value)
+        NameSize = Value
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer and player.Character then
+                local head = player.Character:FindFirstChild("Head")
+                if head then
+                    local nameGui = head:FindFirstChild("NameGui")
+                    if nameGui then
+                        local nameLabel = nameGui:FindFirstChild("NameLabel")
+                        if nameLabel then
+                            nameLabel.TextSize = Value
+                        end
+                    end
+                end
+            end
+        end
+    end
+})
+
+NameSizeSlider:SetValue(14)  -- Đặt giá trị mặc định
+
+----------------------------------------------------------------------------
+local tracersObjects = {}
+local tracersEnabled = false
+local tracersPosition = "Dưới"
+local tracerThickness = 1
+local tracerColor = Color3.new(0.4, 0.7, 1)
+local tracerTransparency = 1
+local boxesEnabled = false
+local boxColor = Color3.new(1, 1, 1)
+local boxTransparency = 0.5
+local boxThickness = 1
+
+local function taoTracer()
+    local tracer = Drawing.new("Line")
+    tracer.Thickness = tracerThickness
+    tracer.Color = tracerColor
+    tracer.Transparency = tracerTransparency
+    return tracer
+end
+
+local function taoBox()
+    local box = Drawing.new("Quad")
+    box.Thickness = boxThickness
+    box.Color = boxColor
+    box.Transparency = boxTransparency
+    box.Filled = false
+    return box
+end
+
+local function layViTriTracer()
+    local kichThuocManHinh = camera.ViewportSize
+    local viTri = Vector2.new(kichThuocManHinh.X / 2, kichThuocManHinh.Y)
+    
+    if tracersPosition == "Trên" then
+        viTri = Vector2.new(kichThuocManHinh.X / 2, 0)
+    elseif tracersPosition == "Giữa" then
+        viTri = Vector2.new(kichThuocManHinh.X / 2, kichThuocManHinh.Y / 2)
+    elseif tracersPosition == "Trái" then
+        viTri = Vector2.new(0, kichThuocManHinh.Y / 2)
+    elseif tracersPosition == "Phải" then
+        viTri = Vector2.new(kichThuocManHinh.X, kichThuocManHinh.Y / 2)
+    end
+    
+    return viTri
+end
+
+local function capNhatESP()
+    local diemBatDauTracer = layViTriTracer()
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer then
+            local playerObjects = tracersObjects[player]
+            if not playerObjects then
+                playerObjects = {
+                    tracer = taoTracer(),
+                    box = taoBox()
+                }
+                tracersObjects[player] = playerObjects
+            end
+            
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local hrp = character.HumanoidRootPart
+                local vector, trongManHinh = camera:WorldToViewportPoint(hrp.Position)
+                
+                if trongManHinh then
+                    -- Cập nhật tracer
+                    if tracersEnabled then
+                        playerObjects.tracer.From = diemBatDauTracer
+                        playerObjects.tracer.To = Vector2.new(vector.X, vector.Y)
+                        playerObjects.tracer.Visible = true
+                    else
+                        playerObjects.tracer.Visible = false
+                    end
+                    
+                    -- Cập nhật box
+                    if boxesEnabled then
+                        local topLeft = camera:WorldToViewportPoint((hrp.CFrame * CFrame.new(-3, 3, 0)).Position)
+                        local topRight = camera:WorldToViewportPoint((hrp.CFrame * CFrame.new(3, 3, 0)).Position)
+                        local bottomLeft = camera:WorldToViewportPoint((hrp.CFrame * CFrame.new(-3, -3, 0)).Position)
+                        local bottomRight = camera:WorldToViewportPoint((hrp.CFrame * CFrame.new(3, -3, 0)).Position)
+                        
+                        playerObjects.box.PointA = Vector2.new(topLeft.X, topLeft.Y)
+                        playerObjects.box.PointB = Vector2.new(topRight.X, topRight.Y)
+                        playerObjects.box.PointC = Vector2.new(bottomRight.X, bottomRight.Y)
+                        playerObjects.box.PointD = Vector2.new(bottomLeft.X, bottomLeft.Y)
+                        playerObjects.box.Visible = true
+                    else
+                        playerObjects.box.Visible = false
+                    end
+                else
+                    playerObjects.tracer.Visible = false
+                    playerObjects.box.Visible = false
+                end
+            else
+                playerObjects.tracer.Visible = false
+                playerObjects.box.Visible = false
+            end
+        end
+    end
+end
+
+local function donDepESP()
+    for player, objects in pairs(tracersObjects) do
+        objects.tracer:Remove()
+        objects.box:Remove()
+    end
+    tracersObjects = {}
+end
+
+local function playerRemoving(player)
+    if tracersObjects[player] then
+        tracersObjects[player].tracer:Remove()
+        tracersObjects[player].box:Remove()
+        tracersObjects[player] = nil
+    end
+end
+
+Players.PlayerRemoving:Connect(playerRemoving)
+
+-- UI Components
+local TracersDropdown = MainSection:AddDropdown("TracersDropdown", {
+    Title = "Đường kẻ",
+    Values = {"Tắt", "Trên", "Dưới", "Giữa", "Trái", "Phải"},
+    Multi = false,
+    Default = Configuration.TracersPosition == "Tắt" and 1 or table.find({"Trên", "Dưới", "Giữa", "Trái", "Phải"}, Configuration.TracersPosition),
+})
+
+TracersDropdown:OnChanged(function(Value)
+    if Value == "Tắt" then
+        tracersEnabled = false
+    else
+        tracersEnabled = true
+        tracersPosition = Value
+    end
+    Configuration.Tracers = tracersEnabled
+    Configuration.TracersPosition = Value
+end)
+
+local BoxToggle = MainSection:AddToggle("BoxToggle", {
+    Title = "Hiển thị Box",
+    Default = boxesEnabled
+})
+
+BoxToggle:OnChanged(function(Value)
+    boxesEnabled = Value
+    Configuration.BoxesEnabled = Value
+end)
+
+local TracerColorPicker = MainSection:AddColorPicker("TracerColorPicker", {
+    Title = "Màu đường kẻ",
+    Default = tracerColor,
+    Callback = function(Value)
+        tracerColor = Value
+        for _, objects in pairs(tracersObjects) do
+            objects.tracer.Color = Value
+        end
+    end
+})
+
+local BoxColorPicker = MainSection:AddColorPicker("BoxColorPicker", {
+    Title = "Màu Box",
+    Default = boxColor,
+    Callback = function(Value)
+        boxColor = Value
+        for _, objects in pairs(tracersObjects) do
+            objects.box.Color = Value
+        end
+    end
+})
+
+local TracerThicknessSlider = MainSection:AddSlider("TracerThicknessSlider", {
+    Title = "Độ dày đường kẻ",
+    Min = 1,
+    Max = 5,
+    Default = tracerThickness,
+    Step = 1,
+    Callback = function(Value)
+        tracerThickness = Value
+        for _, objects in pairs(tracersObjects) do
+            objects.tracer.Thickness = Value
+        end
+    end
+})
+
+local BoxThicknessSlider = MainSection:AddSlider("BoxThicknessSlider", {
+    Title = "Độ dày Box",
+    Min = 1,
+    Max = 5,
+    Default = boxThickness,
+    Step = 1,
+    Callback = function(Value)
+        boxThickness = Value
+        for _, objects in pairs(tracersObjects) do
+            objects.box.Thickness = Value
+        end
+    end
+})
+
+local TracerTransparencySlider = MainSection:AddSlider("TracerTransparencySlider", {
+    Title = "Độ trong suốt đường kẻ",
+    Min = 0,
+    Max = 1,
+    Default = tracerTransparency,
+    Step = 0.1,
+    Callback = function(Value)
+        tracerTransparency = Value
+        for _, objects in pairs(tracersObjects) do
+            objects.tracer.Transparency = Value
+        end
+    end
+})
+
+local BoxTransparencySlider = MainSection:AddSlider("BoxTransparencySlider", {
+    Title = "Độ trong suốt Box",
+    Min = 0,
+    Max = 1,
+    Default = boxTransparency,
+    Step = 0.1,
+    Callback = function(Value)
+        boxTransparency = Value
+        for _, objects in pairs(tracersObjects) do
+            objects.box.Transparency = Value
+        end
+    end
+})
+
+-- Kết nối hàm cập nhật ESP với RenderStepped
+RunService.RenderStepped:Connect(capNhatESP)
+
+-- Hàm dọn dẹp (gọi khi script của bạn dừng)
+local function cleanup()
+    donDepESP()
+    RunService.RenderStepped:Disconnect()
+end
+
+-- Kết nối hàm cleanup với sự kiện đóng game hoặc script
+game:BindToClose(cleanup)
+---------------------------------------------------------------------------- 
+local player = Players.LocalPlayer
+
+
+local espObjects = {}
+local highlightEnabled = false
+local boxColor = Color3.new(1, 0, 0) -- Default red color
+local boxTransparency = 0.5 -- Default transparency
+local boxOutlineTransparency = 0 -- Default outline transparency
+
+local function createESPObjects()
+    local esp = {
+        highlight = Instance.new("Highlight")
+    }
+    esp.highlight.FillColor = boxColor
+    esp.highlight.OutlineColor = Color3.new(1, 1, 1) -- White outline
+    esp.highlight.FillTransparency = boxTransparency
+    esp.highlight.OutlineTransparency = boxOutlineTransparency
+    esp.highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    return esp
+end
+
+local function updateESPProperties()
+    for _, esp in pairs(espObjects) do
+        esp.highlight.FillColor = boxColor
+        esp.highlight.FillTransparency = boxTransparency
+        esp.highlight.OutlineTransparency = boxOutlineTransparency
+    end
+end
+
+local function updateESP()
+    for player, esp in pairs(espObjects) do
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if highlightEnabled then
+                esp.highlight.Parent = player.Character
+                esp.highlight.Enabled = true
+            else
+                esp.highlight.Enabled = false
+            end
+        else
+            esp.highlight.Enabled = false
+        end
+    end
+end
+
+local function playerAdded(player)
+    if player ~= localPlayer then
+        espObjects[player] = createESPObjects()
+    end
+end
+
+local function playerRemoving(player)
+    if espObjects[player] then
+        espObjects[player].highlight:Destroy()
+        espObjects[player] = nil
+    end
+end
+
+Players.PlayerAdded:Connect(playerAdded)
+Players.PlayerRemoving:Connect(playerRemoving)
+
+local renderSteppedConnection
+
+local HighToggle = MainSection:AddToggle("HLToggle", {
+    Title = "Highlight ESP",
+    Default = Configuration.HL
+})
+
+HighToggle:OnChanged(function(Value)
+    Configuration.HL = Value
+    highlightEnabled = Value
+    if Value then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= localPlayer and not espObjects[player] then
+                playerAdded(player)
+            end
+        end
+        updateESPProperties()
+        if not renderSteppedConnection then
+            renderSteppedConnection = RunService.RenderStepped:Connect(updateESP)
+        end
+    else
+        if renderSteppedConnection then
+            renderSteppedConnection:Disconnect()
+            renderSteppedConnection = nil
+        end
+        for _, esp in pairs(espObjects) do
+            esp.highlight.Enabled = false
+        end
+    end
+end)
+
+-- Color Picker for Highlight ESP
+local ColorPicker = MainSection:AddColorpicker("BoxColor", {
+    Title = "ESP Color",
+    Default = Color3.new(1, 0, 0)
+})
+
+ColorPicker:OnChanged(function(Value)
+    boxColor = Value
+    updateESPProperties()
+end)
+
+-- Transparency Slider for Highlight ESP
+local TransparencySlider = MainSection:AddSlider("BoxTransparency", {
+    Title = "ESP Transparency",
+    Default = 0.5,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    ValueName = "transparency"
+})
+
+TransparencySlider:OnChanged(function(Value)
+    boxTransparency = Value
+    updateESPProperties()
+end)
+
+-- Outline Transparency Slider for Highlight ESP
+local OutlineTransparencySlider = MainSection:AddSlider("BoxOutlineTransparency", {
+    Title = "ESP Outline Transparency",
+    Default = 0,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    ValueName = "transparency"
+})
+
+OutlineTransparencySlider:OnChanged(function(Value)
+    boxOutlineTransparency = Value
+    updateESPProperties()
+end)
+---------------------------------------------------------------------------- 
+local espObjects = {}
+local espEnabled = false
+local boxColor = Color3.new(1, 0, 0) -- Màu đỏ mặc định
+local boxTransparency = 0.5 -- Độ trong suốt mặc định
+local boxOutlineTransparency = 0 -- Độ trong suốt của viền
+local boxThickness = 0.1 -- Độ dày của box
+
+local function create3DBox()
+    local box = Instance.new("Model")
+    for i = 1, 12 do
+        local edge = Instance.new("Part")
+        edge.Name = "Edge" .. i
+        edge.Size = Vector3.new(boxThickness, boxThickness, 1)
+        edge.Anchored = true
+        edge.CanCollide = false
+        edge.Color = boxColor
+        edge.Transparency = boxTransparency
+        edge.Material = Enum.Material.Neon -- Làm cho box phát sáng
+        
+        -- Thêm SurfaceGui để tạo viền
+        local surfaceGui = Instance.new("SurfaceGui")
+        surfaceGui.Face = Enum.NormalId.Front
+        surfaceGui.LightInfluence = 0
+        surfaceGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        surfaceGui.AlwaysOnTop = true
+        surfaceGui.Parent = edge
+
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, 0, 1, 0)
+        frame.BorderSizePixel = 0
+        frame.BackgroundTransparency = boxOutlineTransparency
+        frame.BackgroundColor3 = Color3.new(1, 1, 1) -- Màu viền trắng
+        frame.Parent = surfaceGui
+
+        edge.Parent = box
+    end
+    return box
+end
+
+local function updateBoxProperties()
+    for _, esp in pairs(espObjects) do
+        for i = 1, 12 do
+            local edge = esp["Edge" .. i]
+            edge.Color = boxColor
+            edge.Transparency = boxTransparency
+            edge.Size = Vector3.new(boxThickness, boxThickness, edge.Size.Z)
+            
+            local frame = edge.SurfaceGui.Frame
+            frame.BackgroundTransparency = boxOutlineTransparency
+        end
+    end
+end
+
+local function updateESP()
+    for player, esp in pairs(espObjects) do
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local character = player.Character
+            local hrp = character.HumanoidRootPart
+            local head = character:FindFirstChild("Head")
+            if head then
+                if espEnabled then
+                    esp.Parent = camera  -- Parent to camera to make it render on top
+                    
+                    local size = character:GetExtentsSize()
+                    local position = hrp.Position
+
+                    -- Define the 8 corners of the box
+                    local corners = {
+                        Vector3.new(-size.X/2, -size.Y/2, -size.Z/2),
+                        Vector3.new(size.X/2, -size.Y/2, -size.Z/2),
+                        Vector3.new(-size.X/2, size.Y/2, -size.Z/2),
+                        Vector3.new(size.X/2, size.Y/2, -size.Z/2),
+                        Vector3.new(-size.X/2, -size.Y/2, size.Z/2),
+                        Vector3.new(size.X/2, -size.Y/2, size.Z/2),
+                        Vector3.new(-size.X/2, size.Y/2, size.Z/2),
+                        Vector3.new(size.X/2, size.Y/2, size.Z/2)
+                    }
+
+                    -- Update the 12 edges
+                    local function updateEdge(index, start, stop)
+                        local edge = esp["Edge" .. index]
+                        edge.Size = Vector3.new(boxThickness, boxThickness, (stop - start).Magnitude)
+                        edge.CFrame = CFrame.new(position + (start + stop)/2, position + stop)
+                    end
+
+                    -- Vertical edges
+                    updateEdge(1, corners[1], corners[3])
+                    updateEdge(2, corners[2], corners[4])
+                    updateEdge(3, corners[5], corners[7])
+                    updateEdge(4, corners[6], corners[8])
+
+                    -- Top edges
+                    updateEdge(5, corners[3], corners[4])
+                    updateEdge(6, corners[3], corners[7])
+                    updateEdge(7, corners[7], corners[8])
+                    updateEdge(8, corners[4], corners[8])
+
+                    -- Bottom edges
+                    updateEdge(9, corners[1], corners[2])
+                    updateEdge(10, corners[1], corners[5])
+                    updateEdge(11, corners[5], corners[6])
+                    updateEdge(12, corners[2], corners[6])
+                else
+                    esp.Parent = nil
+                end
+            end
+        else
+            esp.Parent = nil
+        end
+    end
+end
+
+local function playerAdded(player)
+    if player ~= localPlayer then
+        espObjects[player] = create3DBox()
+    end
+end
+
+-- Handle player leaving
+local function playerRemoving(player)
+    if espObjects[player] then
+        espObjects[player]:Destroy()
+        espObjects[player] = nil
+    end
+end
+
+-- Connect events
+Players.PlayerAdded:Connect(playerAdded)
+Players.PlayerRemoving:Connect(playerRemoving)
+
+-- Connect update function to RenderStepped
+local renderSteppedConnection
+
+local Box3Toggle = MainSection:AddToggle("b3Toggle", {
+    Title = "Box 3D",
+    Default = Configuration.b3
+})
+
+Box3Toggle:OnChanged(function(Value)
+    Configuration.Box3 = Value
+    espEnabled = Value
+    if Value then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= localPlayer and not espObjects[player] then
+                playerAdded(player)
+            end
+        end
+        updateBoxProperties() -- Áp dụng thuộc tính hiện tại
+        if not renderSteppedConnection then
+            renderSteppedConnection = RunService.RenderStepped:Connect(updateESP)
+        end
+    else
+        if renderSteppedConnection then
+            renderSteppedConnection:Disconnect()
+            renderSteppedConnection = nil
+        end
+        for _, esp in pairs(espObjects) do
+            esp.Parent = nil
+        end
+    end
+end)
+
+-- Thêm ColorPicker cho Box 3D
+local ColorPicker = MainSection:AddColorpicker("BoxColor", {
+    Title = "Màu Box 3D",
+    Default = Color3.new(1, 0, 0)
+})
+
+ColorPicker:OnChanged(function(Value)
+    boxColor = Value
+    updateBoxProperties()
+end)
+
+-- Thêm Slider cho độ trong suốt của Box
+local TransparencySlider = MainSection:AddSlider("BoxTransparency", {
+    Title = "Độ trong suốt Box",
+    Default = 0.5,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    ValueName = "transparency"
+})
+
+TransparencySlider:OnChanged(function(Value)
+    boxTransparency = Value
+    updateBoxProperties()
+end)
+
+-- Thêm Slider cho độ dày của Box
+local ThicknessSlider = MainSection:AddSlider("BoxThickness", {
+    Title = "Độ dày Box",
+    Default = 0.1,
+    Min = 0.01,
+    Max = 0.5,
+    Rounding = 2,
+    ValueName = "thickness"
+})
+
+ThicknessSlider:OnChanged(function(Value)
+    boxThickness = Value
+    updateBoxProperties()
+end)
+
+-- Thêm Toggle cho xuyên địa hình
+local WallhackToggle = MainSection:AddToggle("WallhackToggle", {
+    Title = "Xuyên địa hình",
+    Default = false
+})
+
+WallhackToggle:OnChanged(function(Value)
+    for _, esp in pairs(espObjects) do
+        for i = 1, 12 do
+            local edge = esp["Edge" .. i]
+            edge.LocalTransparencyModifier = Value and 0 or 1
+        end
+    end
+end)
+
+-- Thêm Toggle cho box phát sáng
+local GlowToggle = MainSection:AddToggle("GlowToggle", {
+    Title = "Box phát sáng",
+    Default = true
+})
+
+GlowToggle:OnChanged(function(Value)
+    for _, esp in pairs(espObjects) do
+        for i = 1, 12 do
+            local edge = esp["Edge" .. i]
+            edge.Material = Value and Enum.Material.Neon or Enum.Material.SmoothPlastic
+        end
+    end
+end)
+
+-- Thêm Slider cho độ trong suốt của viền Box
+local OutlineTransparencySlider = MainSection:AddSlider("OutlineTransparency", {
+    Title = "Độ trong suốt viền",
+    Default = 0,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    ValueName = "transparency"
+})
+
+OutlineTransparencySlider:OnChanged(function(Value)
+    boxOutlineTransparency = Value
+    updateBoxProperties()
+end)
+---------------------------------------------------------------------------- 
+
+-- Phần code hiện tại của bạn
+
+-- Thêm vào cuối file
+local UIVisible = true
+
+local function ToggleUI()
+    UIVisible = not UIVisible
+    Window.Enabled = UIVisible
+end
+
+local UserInputService = game:GetService("UserInputService")
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.F1 then
+        ToggleUI()
+    end
+end)
+
+
+
+local BoxTransparencySlider = MainSection:AddSlider("BoxTransparencySlider", {
+    Title = "Độ trong suốt Box",
+    Min = 0,
+    Max = 1,
+    Default = boxTransparency,
+    Step = 0.1,
+    Callback = function(Value)
+        boxTransparency = Value
+        for _, objects in pairs(tracersObjects) do
+            objects.box.Transparency = Value
+        end
+    end
+})
+
+-- Kết nối hàm cập nhật ESP với RenderStepped
+RunService.RenderStepped:Connect(capNhatESP)
+
+-- Hàm dọn dẹp (gọi khi script của bạn dừng)
+local function cleanup()
+    donDepESP()
+    RunService.RenderStepped:Disconnect()
+end
+
+-- Kết nối hàm cleanup với sự kiện đóng game hoặc script
+game:BindToClose(cleanup)
+---------------------------------------------------------------------------- 
+local player = Players.LocalPlayer
+
+
+local espObjects = {}
+local highlightEnabled = false
+local boxColor = Color3.new(1, 0, 0) -- Default red color
+local boxTransparency = 0.5 -- Default transparency
+local boxOutlineTransparency = 0 -- Default outline transparency
+
+local function createESPObjects()
+    local esp = {
+        highlight = Instance.new("Highlight")
+    }
+    esp.highlight.FillColor = boxColor
+    esp.highlight.OutlineColor = Color3.new(1, 1, 1) -- White outline
+    esp.highlight.FillTransparency = boxTransparency
+    esp.highlight.OutlineTransparency = boxOutlineTransparency
+    esp.highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    return esp
+end
+
+local function updateESPProperties()
+    for _, esp in pairs(espObjects) do
+        esp.highlight.FillColor = boxColor
+        esp.highlight.FillTransparency = boxTransparency
+        esp.highlight.OutlineTransparency = boxOutlineTransparency
+    end
+end
+
+local function updateESP()
+    for player, esp in pairs(espObjects) do
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if highlightEnabled then
+                esp.highlight.Parent = player.Character
+                esp.highlight.Enabled = true
+            else
+                esp.highlight.Enabled = false
+            end
+        else
+            esp.highlight.Enabled = false
+        end
+    end
+end
+
+local function playerAdded(player)
+    if player ~= localPlayer then
+        espObjects[player] = createESPObjects()
+    end
+end
+
+local function playerRemoving(player)
+    if espObjects[player] then
+        espObjects[player].highlight:Destroy()
+        espObjects[player] = nil
+    end
+end
+
+Players.PlayerAdded:Connect(playerAdded)
+Players.PlayerRemoving:Connect(playerRemoving)
+
+local renderSteppedConnection
+
+local HighToggle = MainSection:AddToggle("HLToggle", {
+    Title = "Highlight ESP",
+    Default = Configuration.HL
+})
+
+HighToggle:OnChanged(function(Value)
+    Configuration.HL = Value
+    highlightEnabled = Value
+    if Value then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= localPlayer and not espObjects[player] then
+                playerAdded(player)
+            end
+        end
+        updateESPProperties()
+        if not renderSteppedConnection then
+            renderSteppedConnection = RunService.RenderStepped:Connect(updateESP)
+        end
+    else
+        if renderSteppedConnection then
+            renderSteppedConnection:Disconnect()
+            renderSteppedConnection = nil
+        end
+        for _, esp in pairs(espObjects) do
+            esp.highlight.Enabled = false
+        end
+    end
+end)
+
+-- Color Picker for Highlight ESP
+local ColorPicker = MainSection:AddColorpicker("BoxColor", {
+    Title = "ESP Color",
+    Default = Color3.new(1, 0, 0)
+})
+
+ColorPicker:OnChanged(function(Value)
+    boxColor = Value
+    updateESPProperties()
+end)
+
+-- Transparency Slider for Highlight ESP
+local TransparencySlider = MainSection:AddSlider("BoxTransparency", {
+    Title = "ESP Transparency",
+    Default = 0.5,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    ValueName = "transparency"
+})
+
+TransparencySlider:OnChanged(function(Value)
+    boxTransparency = Value
+    updateESPProperties()
+end)
+
+-- Outline Transparency Slider for Highlight ESP
+local OutlineTransparencySlider = MainSection:AddSlider("BoxOutlineTransparency", {
+    Title = "ESP Outline Transparency",
+    Default = 0,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    ValueName = "transparency"
+})
+
+OutlineTransparencySlider:OnChanged(function(Value)
+    boxOutlineTransparency = Value
+    updateESPProperties()
+end)
+---------------------------------------------------------------------------- 
+local espObjects = {}
+local espEnabled = false
+local boxColor = Color3.new(1, 0, 0) -- Màu đỏ mặc định
+local boxTransparency = 0.5 -- Độ trong suốt mặc định
+local boxOutlineTransparency = 0 -- Độ trong suốt của viền
+local boxThickness = 0.1 -- Độ dày của box
+
+local function create3DBox()
+    local box = Instance.new("Model")
+    for i = 1, 12 do
+        local edge = Instance.new("Part")
+        edge.Name = "Edge" .. i
+        edge.Size = Vector3.new(boxThickness, boxThickness, 1)
+        edge.Anchored = true
+        edge.CanCollide = false
+        edge.Color = boxColor
+        edge.Transparency = boxTransparency
+        edge.Material = Enum.Material.Neon -- Làm cho box phát sáng
+        
+        -- Thêm SurfaceGui để tạo viền
+        local surfaceGui = Instance.new("SurfaceGui")
+        surfaceGui.Face = Enum.NormalId.Front
+        surfaceGui.LightInfluence = 0
+        surfaceGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        surfaceGui.AlwaysOnTop = true
+        surfaceGui.Parent = edge
+
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, 0, 1, 0)
+        frame.BorderSizePixel = 0
+        frame.BackgroundTransparency = boxOutlineTransparency
+        frame.BackgroundColor3 = Color3.new(1, 1, 1) -- Màu viền trắng
+        frame.Parent = surfaceGui
+
+        edge.Parent = box
+    end
+    return box
+end
+
+local function updateBoxProperties()
+    for _, esp in pairs(espObjects) do
+        for i = 1, 12 do
+            local edge = esp["Edge" .. i]
+            edge.Color = boxColor
+            edge.Transparency = boxTransparency
+            edge.Size = Vector3.new(boxThickness, boxThickness, edge.Size.Z)
+            
+            local frame = edge.SurfaceGui.Frame
+            frame.BackgroundTransparency = boxOutlineTransparency
+        end
+    end
+end
+
+local function updateESP()
+    for player, esp in pairs(espObjects) do
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local character = player.Character
+            local hrp = character.HumanoidRootPart
+            local head = character:FindFirstChild("Head")
+            if head then
+                if espEnabled then
+                    esp.Parent = camera  -- Parent to camera to make it render on top
+                    
+                    local size = character:GetExtentsSize()
+                    local position = hrp.Position
+
+                    -- Define the 8 corners of the box
+                    local corners = {
+                        Vector3.new(-size.X/2, -size.Y/2, -size.Z/2),
+                        Vector3.new(size.X/2, -size.Y/2, -size.Z/2),
+                        Vector3.new(-size.X/2, size.Y/2, -size.Z/2),
+                        Vector3.new(size.X/2, size.Y/2, -size.Z/2),
+                        Vector3.new(-size.X/2, -size.Y/2, size.Z/2),
+                        Vector3.new(size.X/2, -size.Y/2, size.Z/2),
+                        Vector3.new(-size.X/2, size.Y/2, size.Z/2),
+                        Vector3.new(size.X/2, size.Y/2, size.Z/2)
+                    }
+
+                    -- Update the 12 edges
+                    local function updateEdge(index, start, stop)
+                        local edge = esp["Edge" .. index]
+                        edge.Size = Vector3.new(boxThickness, boxThickness, (stop - start).Magnitude)
+                        edge.CFrame = CFrame.new(position + (start + stop)/2, position + stop)
+                    end
+
+                    -- Vertical edges
+                    updateEdge(1, corners[1], corners[3])
+                    updateEdge(2, corners[2], corners[4])
+                    updateEdge(3, corners[5], corners[7])
+                    updateEdge(4, corners[6], corners[8])
+
+                    -- Top edges
+                    updateEdge(5, corners[3], corners[4])
+                    updateEdge(6, corners[3], corners[7])
+                    updateEdge(7, corners[7], corners[8])
+                    updateEdge(8, corners[4], corners[8])
+
+                    -- Bottom edges
+                    updateEdge(9, corners[1], corners[2])
+                    updateEdge(10, corners[1], corners[5])
+                    updateEdge(11, corners[5], corners[6])
+                    updateEdge(12, corners[2], corners[6])
+                else
+                    esp.Parent = nil
+                end
+            end
+        else
+            esp.Parent = nil
+        end
+    end
+end
+
+local function playerAdded(player)
+    if player ~= localPlayer then
+        espObjects[player] = create3DBox()
+    end
+end
+
+-- Handle player leaving
+local function playerRemoving(player)
+    if espObjects[player] then
+        espObjects[player]:Destroy()
+        espObjects[player] = nil
+    end
+end
+
+-- Connect events
+Players.PlayerAdded:Connect(playerAdded)
+Players.PlayerRemoving:Connect(playerRemoving)
+
+-- Connect update function to RenderStepped
+local renderSteppedConnection
+
+local Box3Toggle = MainSection:AddToggle("b3Toggle", {
+    Title = "Box 3D",
+    Default = Configuration.b3
+})
+
+Box3Toggle:OnChanged(function(Value)
+    Configuration.Box3 = Value
+    espEnabled = Value
+    if Value then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= localPlayer and not espObjects[player] then
+                playerAdded(player)
+            end
+        end
+        updateBoxProperties() -- Áp dụng thuộc tính hiện tại
+        if not renderSteppedConnection then
+            renderSteppedConnection = RunService.RenderStepped:Connect(updateESP)
+        end
+    else
+        if renderSteppedConnection then
+            renderSteppedConnection:Disconnect()
+            renderSteppedConnection = nil
+        end
+        for _, esp in pairs(espObjects) do
+            esp.Parent = nil
+        end
+    end
+end)
+
+-- Thêm ColorPicker cho Box 3D
+local ColorPicker = MainSection:AddColorpicker("BoxColor", {
+    Title = "Màu Box 3D",
+    Default = Color3.new(1, 0, 0)
+})
+
+ColorPicker:OnChanged(function(Value)
+    boxColor = Value
+    updateBoxProperties()
+end)
+
+-- Thêm Slider cho độ trong suốt của Box
+local TransparencySlider = MainSection:AddSlider("BoxTransparency", {
+    Title = "Độ trong suốt Box",
+    Default = 0.5,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    ValueName = "transparency"
+})
+
+TransparencySlider:OnChanged(function(Value)
+    boxTransparency = Value
+    updateBoxProperties()
+end)
+
+-- Thêm Slider cho độ dày của Box
+local ThicknessSlider = MainSection:AddSlider("BoxThickness", {
+    Title = "Độ dày Box",
+    Default = 0.1,
+    Min = 0.01,
+    Max = 0.5,
+    Rounding = 2,
+    ValueName = "thickness"
+})
+
+ThicknessSlider:OnChanged(function(Value)
+    boxThickness = Value
+    updateBoxProperties()
+end)
+
+-- Thêm Toggle cho xuyên địa hình
+local WallhackToggle = MainSection:AddToggle("WallhackToggle", {
+    Title = "Xuyên địa hình",
+    Default = false
+})
+
+WallhackToggle:OnChanged(function(Value)
+    for _, esp in pairs(espObjects) do
+        for i = 1, 12 do
+            local edge = esp["Edge" .. i]
+            edge.LocalTransparencyModifier = Value and 0 or 1
+        end
+    end
+end)
+
+-- Thêm Toggle cho box phát sáng
+local GlowToggle = MainSection:AddToggle("GlowToggle", {
+    Title = "Box phát sáng",
+    Default = true
+})
+
+GlowToggle:OnChanged(function(Value)
+    for _, esp in pairs(espObjects) do
+        for i = 1, 12 do
+            local edge = esp["Edge" .. i]
+            edge.Material = Value and Enum.Material.Neon or Enum.Material.SmoothPlastic
+        end
+    end
+end)
+
+-- Thêm Slider cho độ trong suốt của viền Box
+local OutlineTransparencySlider = MainSection:AddSlider("OutlineTransparency", {
+    Title = "Độ trong suốt viền",
+    Default = 0,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    ValueName = "transparency"
+})
+
+OutlineTransparencySlider:OnChanged(function(Value)
+    boxOutlineTransparency = Value
+    updateBoxProperties()
+end)
+---------------------------------------------------------------------------- 
+
+-- Phần code hiện tại của bạn
+
+-- Thêm vào cuối file
+local UIVisible = true
+
+local function ToggleUI()
+    UIVisible = not UIVisible
+    Window.Enabled = UIVisible
+end
+
+local UserInputService = game:GetService("UserInputService")
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.F1 then
+        ToggleUI()
+    end
+end)
+
