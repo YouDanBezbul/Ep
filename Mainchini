@@ -559,16 +559,22 @@ end
 
 -- Thiết lập phím tắt để ẩn/hiện GUI
 local minimized = false
+local TabContainer = MainFrame:FindFirstChild("TabContainer")
+local TabContent = MainFrame:FindFirstChild("TabContent")
 
 MinimizeButton.MouseButton1Click:Connect(function()
     minimized = not minimized
     if minimized then
         MainFrame:TweenSize(UDim2.new(0, 400, 0, 30), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.5, true)
+        if TabContainer then TabContainer.Visible = false end
+        if TabContent then TabContent.Visible = false end
         for _, tab in ipairs(Tabs) do
             tab.Visible = false
         end
     else
         MainFrame:TweenSize(UDim2.new(0, 400, 0, 300), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.5, true)
+        if TabContainer then TabContainer.Visible = true end
+        if TabContent then TabContent.Visible = true end
         for _, tab in ipairs(Tabs) do
             if tab.Name == TabButtons[1].Name then
                 tab.Visible = true
