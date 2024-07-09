@@ -18,6 +18,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.Visible = true -- Thêm dòng này
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
@@ -563,15 +564,23 @@ MinimizeButton.MouseButton1Click:Connect(function()
     minimized = not minimized
     if minimized then
         MainFrame:TweenSize(UDim2.new(0, 400, 0, 30), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.5, true)
+        for _, tab in ipairs(Tabs) do
+            tab.Visible = false
+        end
     else
         MainFrame:TweenSize(UDim2.new(0, 400, 0, 300), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.5, true)
+        for _, tab in ipairs(Tabs) do
+            if tab.Name == TabButtons[1].Name then
+                tab.Visible = true
+            end
+        end
     end
 end)
 
 -- Phím tắt F1 để ẩn/hiện GUI
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.F1 and not gameProcessed then
-        ScreenGui.Enabled = not ScreenGui.Enabled
+        MainFrame.Visible = not MainFrame.Visible
     end
 end)
 
